@@ -1,5 +1,6 @@
 package me.juangoncalves.blloc.switchview;
 
+import android.animation.AnimatorSet;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -10,7 +11,7 @@ import android.os.Build;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.animation.LinearInterpolator;
+import android.view.animation.AccelerateDecelerateInterpolator;
 
 import androidx.annotation.Nullable;
 
@@ -20,8 +21,8 @@ public class BllocSwitchView extends View {
         ON, OFF
     }
 
-    private static final long ANIMATION_DURATION = 250L;
-    private static final int ACTUAL_WIDTH = 150;
+    private static final long ANIMATION_DURATION = 300L;
+    private static final int ACTUAL_WIDTH = 140;
     private static final int ACTUAL_HEIGHT = 70;
     private static final float PADDING = 21;
 
@@ -54,51 +55,82 @@ public class BllocSwitchView extends View {
         super(context, attrs, defStyleAttr);
     }
 
-    private ValueAnimator getValueAnimatorToShrinkCircle() {
-        // TODO: User animator set to run at the same time the circle transformation animation and the background color change
+    private AnimatorSet getValueAnimatorToShrinkCircle() {
         ValueAnimator shrinkValueAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), 0f);
         shrinkValueAnimator.setDuration(ANIMATION_DURATION);
-        shrinkValueAnimator.setInterpolator(new LinearInterpolator());
+        shrinkValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         shrinkValueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator valueAnimator) {
                 float updatedWidth = (float) valueAnimator.getAnimatedValue();
                 innerShapeRect.right = innerShapeRect.left + updatedWidth;
+            }
+        });
+
+        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, containerRect.right - PADDING - innerShapeRect.height() / 2);
+        positionAnimator.setDuration(ANIMATION_DURATION);
+        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        positionAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                float updatedPosition = (float) valueAnimator.getAnimatedValue();
+                float width = innerShapeRect.width();
+                innerShapeRect.left = updatedPosition;
+                innerShapeRect.right = updatedPosition + width;
                 invalidate();
             }
         });
-        return shrinkValueAnimator;
+
+        AnimatorSet set = new AnimatorSet();
+        set.playTogether(shrinkValueAnimator, positionAnimator);
+        return set;
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_UP) {
-            ValueAnimator animator;
             if (state == State.OFF) {
-                animator = getValueAnimatorToShrinkCircle();
+                AnimatorSet animatorSet = getValueAnimatorToShrinkCircle();
+                animatorSet.start();
                 state = State.ON;
             } else {
-                animator = getValueAnimatorToExpandCircle();
+                AnimatorSet anim = getValueAnimatorToExpandCircle();
+                anim.start();
                 state = State.OFF;
             }
-            animator.start();
         }
         return true;
     }
 
-    private ValueAnimator getValueAnimatorToExpandCircle() {
-        ValueAnimator animator = ValueAnimator.ofFloat(0f, innerShapeRect.height());
-        animator.setDuration(ANIMATION_DURATION);
-        animator.setInterpolator(new LinearInterpolator());
-        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+    private AnimatorSet getValueAnimatorToExpandCircle() {
+        ValueAnimator shapeAnimator = ValueAnimator.ofFloat(0f, innerShapeRect.height());
+        shapeAnimator.setDuration(ANIMATION_DURATION);
+        shapeAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        shapeAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator valueAnimator) {
                 float updatedWidth = (float) valueAnimator.getAnimatedValue();
                 innerShapeRect.right = innerShapeRect.left + updatedWidth;
+            }
+        });
+
+        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, containerRect.left + PADDING);
+        positionAnimator.setDuration(ANIMATION_DURATION);
+        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        positionAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                float updatedPosition = (float) valueAnimator.getAnimatedValue();
+                float width = innerShapeRect.width();
+                innerShapeRect.left = updatedPosition;
+                innerShapeRect.right = updatedPosition + width;
                 invalidate();
             }
         });
-        return animator;
+
+        AnimatorSet set = new AnimatorSet();
+        set.playTogether(shapeAnimator, positionAnimator);
+        return set;
     }
 
     @Override
