@@ -12,7 +12,6 @@ import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -21,7 +20,6 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import androidx.annotation.Nullable;
 import androidx.core.math.MathUtils;
 import androidx.core.view.GestureDetectorCompat;
-import androidx.core.view.MotionEventCompat;
 import androidx.vectordrawable.graphics.drawable.ArgbEvaluator;
 
 import static android.view.MotionEvent.INVALID_POINTER_ID;
@@ -38,11 +36,15 @@ public class BllocSwitchView extends View {
     private int onBackgroundColor;
     private int offBackgroundColor;
     private boolean checked = true;
+    // The ‘active pointer’ is the one currently moving our object.
+    private int activePointerId = INVALID_POINTER_ID;
+    float lastTouchX;
 
     private RectF containerRect = new RectF();
     private RectF innerShapeRect = new RectF();
     private Paint innerShapePaint = new Paint();
     private Paint containerPaint = new Paint();
+
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -95,87 +97,55 @@ public class BllocSwitchView extends View {
         updateContainerPaint();
     }
 
-//    @Override
-//    public boolean onTouchEvent(MotionEvent event) {
-//        if (gestureDetector.onTouchEvent(event)) {
-//            return true;
-//        }
-//        return super.onTouchEvent(event);
-//    }
-
-    // The ‘active pointer’ is the one currently moving our object.
-    private int mActivePointerId = INVALID_POINTER_ID;
-    float mLastTouchX;
-
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-        // Let the ScaleGestureDetector inspect all events.
-        // mScaleDetector.onTouchEvent(ev);
-
         final int action = ev.getActionMasked();
-
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
-                final int pointerIndex = MotionEventCompat.getActionIndex(ev);
-                final float x = MotionEventCompat.getX(ev, pointerIndex);
-                int blah = getWidth();
+                final int pointerIndex = ev.getActionIndex();
                 // Remember where we started (for dragging)
-                mLastTouchX = x;
+                lastTouchX = ev.getX(pointerIndex);
                 // Save the ID of this pointer (for dragging)
-                mActivePointerId = ev.getPointerId(0);
+                activePointerId = ev.getPointerId(0);
                 break;
             }
 
             case MotionEvent.ACTION_MOVE: {
                 // Find the index of the active pointer and fetch its position
-                final int pointerIndex = ev.findPointerIndex(mActivePointerId);
-
-                final float x = ev.getX();
-                final float y = ev.getY();
-
+                final int pointerIndex = ev.findPointerIndex(activePointerId);
+                final float x = ev.getX(pointerIndex);
                 // Calculate the distance moved
-                final float dx = x - mLastTouchX;
+                final float dx = x - lastTouchX;
                 float nextLeftPos = MathUtils.clamp(
                         innerShapeRect.left + dx,
-                        containerRect.left + PADDING,
-                        getEndCoordinateForInnerShape()
-                );
-                float dafuck = calculateInnerShapeWidthForPosition(nextLeftPos);
-                Log.d("tes", String.format("L: %f Calculated width: %f ", nextLeftPos, dafuck));
-                Log.d("bruh", "Should be min inner = " + calculateInnerShapeWidthForPosition(containerRect.right - PADDING));
-                float nextRightPos = MathUtils.clamp(
-                        nextLeftPos + calculateInnerShapeWidthForPosition(nextLeftPos),
-                        containerRect.left + PADDING + innerShapeRect.height() / 2,
-                        getEndCoordinateForInnerShape()
+                        getMinLeftCoordinateForInnerShape(),
+                        getMaxRightCoordinateForInnerShape()
                 );
                 innerShapeRect.left = nextLeftPos;
-                innerShapeRect.right = nextLeftPos + calculateInnerShapeWidthForPosition(nextLeftPos);// nextRightPos;
+                innerShapeRect.right = nextLeftPos + calculateInnerShapeWidthForPosition(nextLeftPos);
                 invalidate();
                 // Remember this touch position for the next move event
-                mLastTouchX = x;
+                lastTouchX = x;
                 break;
             }
 
-            case MotionEvent.ACTION_UP: {
-                mActivePointerId = INVALID_POINTER_ID;
-                break;
-            }
+            case MotionEvent.ACTION_UP:
 
             case MotionEvent.ACTION_CANCEL: {
-                mActivePointerId = INVALID_POINTER_ID;
+                activePointerId = INVALID_POINTER_ID;
                 break;
             }
 
             case MotionEvent.ACTION_POINTER_UP: {
-                final int pointerIndex = ev.getActionIndex(); //MotionEventCompat.getActionIndex(ev);
-                final int pointerId = ev.getPointerId(pointerIndex);// MotionEventCompat.getPointerId(ev, pointerIndex);
+                final int pointerIndex = ev.getActionIndex();
+                final int pointerId = ev.getPointerId(pointerIndex);
 
-                if (pointerId == mActivePointerId) {
+                if (pointerId == activePointerId) {
                     // This was our active pointer going up. Choose a new
                     // active pointer and adjust accordingly.
                     final int newPointerIndex = pointerIndex == 0 ? 1 : 0;
-                    mLastTouchX = ev.getX(newPointerIndex); //MotionEventCompat.getX(ev, newPointerIndex);
-                    mActivePointerId = ev.getPointerId(newPointerIndex);//MotionEventCompat.getPointerId(ev, newPointerIndex);
+                    lastTouchX = ev.getX(newPointerIndex);
+                    activePointerId = ev.getPointerId(newPointerIndex);
                 }
                 break;
             }
@@ -184,8 +154,8 @@ public class BllocSwitchView extends View {
     }
 
     private float calculateInnerShapeWidthForPosition(float x) {
-        float leftLimit = containerRect.left + PADDING;
-        float rightLimit = getEndCoordinateForInnerShape();//containerRect.right - PADDING;
+        float leftLimit = getMinLeftCoordinateForInnerShape();
+        float rightLimit = getMaxRightCoordinateForInnerShape();
         float maxInnerWidth = innerShapeRect.height();
         float slope = (leftLimit - rightLimit) / (maxInnerWidth - MIN_INNER_SHAPE_WIDTH);
         float Q = -1 * MIN_INNER_SHAPE_WIDTH * slope + rightLimit;
@@ -252,12 +222,11 @@ public class BllocSwitchView extends View {
         innerShapeRect.bottom = containerRect.bottom - PADDING;
         // Decide depending on the switch checked whether to draw the full circle (ON) or the straight line (OFF)
         if (isChecked()) {
-            innerShapeRect.left = containerRect.left + PADDING;
+            innerShapeRect.left = getMinLeftCoordinateForInnerShape();
             innerShapeRect.right = innerShapeRect.left + innerShapeRect.height();
         } else {
-            innerShapeRect.right = getEndCoordinateForInnerShape();
+            innerShapeRect.right = getMaxRightCoordinateForInnerShape();
             innerShapeRect.left = innerShapeRect.right - MIN_INNER_SHAPE_WIDTH;
-            Log.d("wut", "Should be min inner too = " + innerShapeRect.width());
         }
     }
 
@@ -277,13 +246,17 @@ public class BllocSwitchView extends View {
         setChecked(customState.isChecked);
     }
 
-    private float getEndCoordinateForInnerShape() {
+    private float getMaxRightCoordinateForInnerShape() {
         return containerRect.right - PADDING - innerShapeRect.height() / 2;
+    }
+
+    private float getMinLeftCoordinateForInnerShape() {
+        return containerRect.left + PADDING;
     }
 
     private void updateInnerShapePaint() {
         innerShapePaint.setStyle(Paint.Style.STROKE);
-        innerShapePaint.setColor(Color.RED);
+        innerShapePaint.setColor(Color.WHITE);
         innerShapePaint.setStrokeWidth(4);
     }
 
@@ -306,7 +279,7 @@ public class BllocSwitchView extends View {
         shrinkValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         shrinkValueAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
 
-        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getEndCoordinateForInnerShape());
+        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getMaxRightCoordinateForInnerShape());
         positionAnimator.setDuration(ANIMATION_DURATION);
         positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
@@ -326,7 +299,7 @@ public class BllocSwitchView extends View {
         shapeAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         shapeAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
 
-        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, containerRect.left + PADDING);
+        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getMinLeftCoordinateForInnerShape());
         positionAnimator.setDuration(ANIMATION_DURATION);
         positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());

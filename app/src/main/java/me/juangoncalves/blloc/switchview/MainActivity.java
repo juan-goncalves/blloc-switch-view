@@ -13,6 +13,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Switch defaultSwitch = findViewById(R.id.switch1);
         BllocSwitchView bllocSwitch = findViewById(R.id.bllocSwitch);
-        bllocSwitch.setChecked(false);
+        bllocSwitch.setChecked(true);
     }
 }
