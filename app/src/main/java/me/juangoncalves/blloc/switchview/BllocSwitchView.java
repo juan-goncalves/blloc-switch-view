@@ -153,13 +153,17 @@ public class BllocSwitchView extends View {
         return true;
     }
 
-    private float calculateInnerShapeWidthForPosition(float x) {
+    private float calculateInnerShapeWidthForPosition(float leftPoint) {
+        // Modelled as a line (y = mx + b) with the vertical axis being the left coordinate of the
+        // inner shape rectangle and the horizontal axis as the expected width of the inner shape
+        // for that position, such that for Y = rightLimit, the shape's width equals MIN_INNER_SHAPE_WIDTH,
+        // and for Y = leftLimit, the diameter of the full circle.
         float leftLimit = getMinLeftCoordinateForInnerShape();
         float rightLimit = getMaxRightCoordinateForInnerShape();
-        float maxInnerWidth = innerShapeRect.height();
+        float maxInnerWidth = getFullInnerCircleDiameter();
         float slope = (leftLimit - rightLimit) / (maxInnerWidth - MIN_INNER_SHAPE_WIDTH);
-        float Q = -1 * MIN_INNER_SHAPE_WIDTH * slope + rightLimit;
-        float result = (x - Q) / slope;
+        float yAxisIntersection = -1 * MIN_INNER_SHAPE_WIDTH * slope + rightLimit;
+        float result = (leftPoint - yAxisIntersection) / slope;
         return MathUtils.clamp(result, MIN_INNER_SHAPE_WIDTH, maxInnerWidth);
     }
 
@@ -223,7 +227,7 @@ public class BllocSwitchView extends View {
         // Decide depending on the switch checked whether to draw the full circle (ON) or the straight line (OFF)
         if (isChecked()) {
             innerShapeRect.left = getMinLeftCoordinateForInnerShape();
-            innerShapeRect.right = innerShapeRect.left + innerShapeRect.height();
+            innerShapeRect.right = innerShapeRect.left + getFullInnerCircleDiameter();
         } else {
             innerShapeRect.right = getMaxRightCoordinateForInnerShape();
             innerShapeRect.left = innerShapeRect.right - MIN_INNER_SHAPE_WIDTH;
@@ -247,7 +251,13 @@ public class BllocSwitchView extends View {
     }
 
     private float getMaxRightCoordinateForInnerShape() {
-        return containerRect.right - PADDING - innerShapeRect.height() / 2;
+        return containerRect.right - PADDING - getFullInnerCircleDiameter() / 2;
+    }
+
+    private float getFullInnerCircleDiameter() {
+        // As we never modify the height of the inner shape rect, we can always use its height
+        // as the diameter of the circle when it is completely expanded.
+        return innerShapeRect.height();
     }
 
     private float getMinLeftCoordinateForInnerShape() {
@@ -294,7 +304,7 @@ public class BllocSwitchView extends View {
     }
 
     private AnimatorSet getValueAnimatorToExpandCircle() {
-        ValueAnimator shapeAnimator = ValueAnimator.ofFloat(0f, innerShapeRect.height());
+        ValueAnimator shapeAnimator = ValueAnimator.ofFloat(0f, getFullInnerCircleDiameter());
         shapeAnimator.setDuration(ANIMATION_DURATION);
         shapeAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         shapeAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
