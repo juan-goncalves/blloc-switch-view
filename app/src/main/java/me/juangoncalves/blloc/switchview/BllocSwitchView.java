@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 
 import androidx.annotation.Nullable;
+import androidx.vectordrawable.graphics.drawable.ArgbEvaluator;
 
 public class BllocSwitchView extends View {
 
@@ -21,13 +22,15 @@ public class BllocSwitchView extends View {
         ON, OFF
     }
 
-    private static final long ANIMATION_DURATION = 300L;
+    private static final long ANIMATION_DURATION = 330L;
     private static final int ACTUAL_WIDTH = 140;
     private static final int ACTUAL_HEIGHT = 70;
     private static final float PADDING = 21;
 
     private Paint innerShapePaint = getInnerShapePaint();
     private Paint containerPaint = getContainerPaint();
+    private int onBackgroundColor;
+    private int offBackgroundColor;
 
     private State state = State.OFF;
     private RectF containerRect = new RectF();
@@ -49,6 +52,8 @@ public class BllocSwitchView extends View {
 
     public BllocSwitchView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
+        onBackgroundColor = getResources().getColor(R.color.switch_view_background_on);
+        offBackgroundColor = getResources().getColor(R.color.switch_view_background_off);
     }
 
     public BllocSwitchView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
@@ -59,30 +64,18 @@ public class BllocSwitchView extends View {
         ValueAnimator shrinkValueAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), 0f);
         shrinkValueAnimator.setDuration(ANIMATION_DURATION);
         shrinkValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-        shrinkValueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                float updatedWidth = (float) valueAnimator.getAnimatedValue();
-                innerShapeRect.right = innerShapeRect.left + updatedWidth;
-            }
-        });
+        shrinkValueAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
 
         ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, containerRect.right - PADDING - innerShapeRect.height() / 2);
         positionAnimator.setDuration(ANIMATION_DURATION);
         positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-        positionAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                float updatedPosition = (float) valueAnimator.getAnimatedValue();
-                float width = innerShapeRect.width();
-                innerShapeRect.left = updatedPosition;
-                innerShapeRect.right = updatedPosition + width;
-                invalidate();
-            }
-        });
+        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
 
+        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), containerPaint.getColor(), offBackgroundColor);
+        colorAnimation.setDuration(ANIMATION_DURATION);
+        colorAnimation.addUpdateListener(new BackgroundColorUpdateListener());
         AnimatorSet set = new AnimatorSet();
-        set.playTogether(shrinkValueAnimator, positionAnimator);
+        set.playTogether(shrinkValueAnimator, positionAnimator, colorAnimation);
         return set;
     }
 
@@ -106,30 +99,19 @@ public class BllocSwitchView extends View {
         ValueAnimator shapeAnimator = ValueAnimator.ofFloat(0f, innerShapeRect.height());
         shapeAnimator.setDuration(ANIMATION_DURATION);
         shapeAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-        shapeAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                float updatedWidth = (float) valueAnimator.getAnimatedValue();
-                innerShapeRect.right = innerShapeRect.left + updatedWidth;
-            }
-        });
+        shapeAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
 
         ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, containerRect.left + PADDING);
         positionAnimator.setDuration(ANIMATION_DURATION);
         positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-        positionAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                float updatedPosition = (float) valueAnimator.getAnimatedValue();
-                float width = innerShapeRect.width();
-                innerShapeRect.left = updatedPosition;
-                innerShapeRect.right = updatedPosition + width;
-                invalidate();
-            }
-        });
+        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
+
+        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), containerPaint.getColor(), onBackgroundColor);
+        colorAnimation.setDuration(ANIMATION_DURATION);
+        colorAnimation.addUpdateListener(new BackgroundColorUpdateListener());
 
         AnimatorSet set = new AnimatorSet();
-        set.playTogether(shapeAnimator, positionAnimator);
+        set.playTogether(shapeAnimator, positionAnimator, colorAnimation);
         return set;
     }
 
@@ -194,8 +176,37 @@ public class BllocSwitchView extends View {
     private Paint getContainerPaint() {
         Paint paint = new Paint();
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(getResources().getColor(R.color.switch_view_background));
+        paint.setColor(getResources().getColor(R.color.switch_view_background_on));
         return paint;
+    }
+
+    private class BackgroundColorUpdateListener implements ValueAnimator.AnimatorUpdateListener {
+        @Override
+        public void onAnimationUpdate(ValueAnimator valueAnimator) {
+            int updatedColor = (int) valueAnimator.getAnimatedValue();
+            containerPaint.setColor(updatedColor);
+            invalidate();
+        }
+    }
+
+    private class InnerShapeWidthUpdateListener implements ValueAnimator.AnimatorUpdateListener {
+        @Override
+        public void onAnimationUpdate(ValueAnimator valueAnimator) {
+            float updatedWidth = (float) valueAnimator.getAnimatedValue();
+            innerShapeRect.right = innerShapeRect.left + updatedWidth;
+            invalidate();
+        }
+    }
+
+    private class InnerShapePositionUpdateListener implements ValueAnimator.AnimatorUpdateListener {
+        @Override
+        public void onAnimationUpdate(ValueAnimator valueAnimator) {
+            float updatedPosition = (float) valueAnimator.getAnimatedValue();
+            float width = innerShapeRect.width();
+            innerShapeRect.left = updatedPosition;
+            innerShapeRect.right = updatedPosition + width;
+            invalidate();
+        }
     }
 
 }
