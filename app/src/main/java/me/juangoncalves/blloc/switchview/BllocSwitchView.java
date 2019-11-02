@@ -61,7 +61,7 @@ public class BllocSwitchView extends View {
     }
 
     private AnimatorSet getValueAnimatorToShrinkCircle() {
-        ValueAnimator shrinkValueAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), 0f);
+        ValueAnimator shrinkValueAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), 1f);
         shrinkValueAnimator.setDuration(ANIMATION_DURATION);
         shrinkValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         shrinkValueAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
