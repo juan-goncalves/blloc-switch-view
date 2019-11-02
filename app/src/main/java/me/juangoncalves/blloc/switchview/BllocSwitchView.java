@@ -75,59 +75,23 @@ public class BllocSwitchView extends View {
         updateContainerPaint();
     }
 
-    private AnimatorSet getValueAnimatorToShrinkCircle() {
-        ValueAnimator shrinkValueAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), MIN_INNER_SHAPE_WIDTH);
-        shrinkValueAnimator.setDuration(ANIMATION_DURATION);
-        shrinkValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-        shrinkValueAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
-
-        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getEndCoordinateForInnerShape());
-        positionAnimator.setDuration(ANIMATION_DURATION);
-        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
-
-        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), containerPaint.getColor(), offBackgroundColor);
-        colorAnimation.setDuration(ANIMATION_DURATION);
-        colorAnimation.addUpdateListener(new BackgroundColorUpdateListener());
-        AnimatorSet set = new AnimatorSet();
-        set.playTogether(shrinkValueAnimator, positionAnimator, colorAnimation);
-        return set;
-    }
-
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_UP) {
-            if (checked) {
-                AnimatorSet animatorSet = getValueAnimatorToShrinkCircle();
-                animatorSet.start();
-                checked = false;
-            } else {
-                AnimatorSet anim = getValueAnimatorToExpandCircle();
-                anim.start();
-                checked = true;
-            }
+            performClick();
         }
         return true;
     }
 
-    private AnimatorSet getValueAnimatorToExpandCircle() {
-        ValueAnimator shapeAnimator = ValueAnimator.ofFloat(0f, innerShapeRect.height());
-        shapeAnimator.setDuration(ANIMATION_DURATION);
-        shapeAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-        shapeAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
-
-        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, containerRect.left + PADDING);
-        positionAnimator.setDuration(ANIMATION_DURATION);
-        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
-
-        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), containerPaint.getColor(), onBackgroundColor);
-        colorAnimation.setDuration(ANIMATION_DURATION);
-        colorAnimation.addUpdateListener(new BackgroundColorUpdateListener());
-
-        AnimatorSet set = new AnimatorSet();
-        set.playTogether(shapeAnimator, positionAnimator, colorAnimation);
-        return set;
+    @Override
+    public boolean performClick() {
+        if (checked) {
+            getValueAnimatorToShrinkCircle().start();
+        } else {
+            getValueAnimatorToExpandCircle().start();
+        }
+        checked = !checked;
+        return super.performClick();
     }
 
     @Override
@@ -224,6 +188,47 @@ public class BllocSwitchView extends View {
             return offBackgroundColor;
         }
     }
+
+    private AnimatorSet getValueAnimatorToShrinkCircle() {
+        ValueAnimator shrinkValueAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), MIN_INNER_SHAPE_WIDTH);
+        shrinkValueAnimator.setDuration(ANIMATION_DURATION);
+        shrinkValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        shrinkValueAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
+
+        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getEndCoordinateForInnerShape());
+        positionAnimator.setDuration(ANIMATION_DURATION);
+        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
+
+        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), containerPaint.getColor(), offBackgroundColor);
+        colorAnimation.setDuration(ANIMATION_DURATION);
+        colorAnimation.addUpdateListener(new BackgroundColorUpdateListener());
+
+        AnimatorSet set = new AnimatorSet();
+        set.playTogether(shrinkValueAnimator, positionAnimator, colorAnimation);
+        return set;
+    }
+
+    private AnimatorSet getValueAnimatorToExpandCircle() {
+        ValueAnimator shapeAnimator = ValueAnimator.ofFloat(0f, innerShapeRect.height());
+        shapeAnimator.setDuration(ANIMATION_DURATION);
+        shapeAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        shapeAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
+
+        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, containerRect.left + PADDING);
+        positionAnimator.setDuration(ANIMATION_DURATION);
+        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
+
+        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), containerPaint.getColor(), onBackgroundColor);
+        colorAnimation.setDuration(ANIMATION_DURATION);
+        colorAnimation.addUpdateListener(new BackgroundColorUpdateListener());
+
+        AnimatorSet set = new AnimatorSet();
+        set.playTogether(shapeAnimator, positionAnimator, colorAnimation);
+        return set;
+    }
+
 
     private class BackgroundColorUpdateListener implements ValueAnimator.AnimatorUpdateListener {
         @Override
