@@ -19,8 +19,6 @@ import androidx.vectordrawable.graphics.drawable.ArgbEvaluator;
 
 public class BllocSwitchView extends View {
 
-    private enum State {ON, OFF}
-
     private static final long ANIMATION_DURATION = 330L;
     private static final int ACTUAL_WIDTH = 140;
     private static final int ACTUAL_HEIGHT = 70;
@@ -29,7 +27,7 @@ public class BllocSwitchView extends View {
 
     private int onBackgroundColor;
     private int offBackgroundColor;
-    private State state = State.ON;
+    private boolean checked = true;
 
     private RectF containerRect = new RectF();
     private RectF innerShapeRect = new RectF();
@@ -66,15 +64,11 @@ public class BllocSwitchView extends View {
     }
 
     public boolean isChecked() {
-        return state == State.ON;
+        return checked;
     }
 
     public void setChecked(boolean checked) {
-        if (checked) {
-            state = State.ON;
-        } else {
-            state = State.OFF;
-        }
+        this.checked = checked;
         updateContainerPaint();
     }
 
@@ -100,14 +94,14 @@ public class BllocSwitchView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_UP) {
-            if (state == State.ON) {
+            if (checked) {
                 AnimatorSet animatorSet = getValueAnimatorToShrinkCircle();
                 animatorSet.start();
-                state = State.OFF;
+                checked = false;
             } else {
                 AnimatorSet anim = getValueAnimatorToExpandCircle();
                 anim.start();
-                state = State.ON;
+                checked = true;
             }
         }
         return true;
@@ -179,7 +173,7 @@ public class BllocSwitchView extends View {
         containerRect.bottom = verticalCenter + ACTUAL_HEIGHT / 2;
         innerShapeRect.top = containerRect.top + PADDING;
         innerShapeRect.bottom = containerRect.bottom - PADDING;
-        // Decide depending on the switch state whether to draw the full circle (ON) or the straight line (OFF)
+        // Decide depending on the switch checked whether to draw the full circle (ON) or the straight line (OFF)
         if (isChecked()) {
             innerShapeRect.left = containerRect.left + PADDING;
             innerShapeRect.right = innerShapeRect.left + innerShapeRect.height();
@@ -205,7 +199,7 @@ public class BllocSwitchView extends View {
     }
 
     private int getColorForState() {
-        if (state == State.ON) {
+        if (checked) {
             return onBackgroundColor;
         } else {
             return offBackgroundColor;
