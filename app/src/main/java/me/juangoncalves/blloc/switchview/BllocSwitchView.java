@@ -9,6 +9,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.os.Build;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -46,6 +48,7 @@ public class BllocSwitchView extends View {
 
     public BllocSwitchView(Context context) {
         super(context);
+        setSaveEnabled(true);
     }
 
     public BllocSwitchView(Context context, @Nullable AttributeSet attrs) {
@@ -183,6 +186,22 @@ public class BllocSwitchView extends View {
         }
     }
 
+    @Nullable
+    @Override
+    protected Parcelable onSaveInstanceState() {
+        Parcelable superState = super.onSaveInstanceState();
+        SavedState customState = new SavedState(superState);
+        customState.isChecked = checked;
+        return customState;
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Parcelable state) {
+        super.onRestoreInstanceState(state);
+        SavedState customState = (SavedState) state;
+        setChecked(customState.isChecked);
+    }
+
     private float getEndCoordinateForInnerShape() {
         return containerRect.right - PADDING - innerShapeRect.height() / 2;
     }
@@ -233,6 +252,45 @@ public class BllocSwitchView extends View {
             innerShapeRect.right = updatedPosition + width;
             invalidate();
         }
+    }
+
+    private static class SavedState extends BaseSavedState {
+        boolean isChecked;
+        private static final int TRUE = 1;
+        private static final int FALSE = 0;
+
+        SavedState(Parcelable superState) {
+            super(superState);
+        }
+
+        private SavedState(Parcel in) {
+            super(in);
+            isChecked = in.readInt() == TRUE;
+        }
+
+        @Override
+        public void writeToParcel(Parcel out, int flags) {
+            super.writeToParcel(out, flags);
+            out.writeInt(isChekedAsInt());
+        }
+
+        public static final Parcelable.Creator<SavedState> CREATOR = new Parcelable.Creator<SavedState>() {
+            public SavedState createFromParcel(Parcel in) {
+                return new SavedState(in);
+            }
+
+            public SavedState[] newArray(int size) {
+                return new SavedState[size];
+            }
+        };
+
+        private int isChekedAsInt() {
+            if (isChecked)
+                return TRUE;
+            else
+                return FALSE;
+        }
+
     }
 
 }
