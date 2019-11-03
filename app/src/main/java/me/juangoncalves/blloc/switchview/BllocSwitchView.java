@@ -27,6 +27,7 @@ import static android.view.MotionEvent.INVALID_POINTER_ID;
 public class BllocSwitchView extends View {
 
     private static final long ANIMATION_DURATION = 330L;
+    private static final long MAX_CLICK_DURATION = 200L;
     private static final int ACTUAL_WIDTH = 140;
     private static final int ACTUAL_HEIGHT = 70;
     private static final float MIN_INNER_SHAPE_WIDTH = 1f;
@@ -97,16 +98,23 @@ public class BllocSwitchView extends View {
         updateContainerPaint();
     }
 
+    private AnimatorSet currentAnimation = null;
+    private long clickStartTime = 0;
+
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         final int action = ev.getActionMasked();
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
                 final int pointerIndex = ev.getActionIndex();
+                clickStartTime = System.currentTimeMillis();
                 // Remember where we started (for dragging)
                 lastTouchX = ev.getX(pointerIndex);
                 // Save the ID of this pointer (for dragging)
                 activePointerId = ev.getPointerId(0);
+                if (currentAnimation != null) {
+                    currentAnimation.cancel();
+                }
                 break;
             }
 
@@ -129,7 +137,46 @@ public class BllocSwitchView extends View {
                 break;
             }
 
-            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_UP: {
+                activePointerId = INVALID_POINTER_ID;
+                long actionDuration = System.currentTimeMillis() - clickStartTime;
+                if (actionDuration <= MAX_CLICK_DURATION) {
+                    performClick();
+                } else {
+                    float lastX = ev.getX();
+                    float containerCenter = containerRect.centerX();
+                    if (lastX <= containerCenter) {
+                        // Expand the circle and move to the left
+                        ValueAnimator shapeAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), getFullInnerCircleDiameter());
+                        shapeAnimator.setDuration(ANIMATION_DURATION);
+                        shapeAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+                        shapeAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
+                        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getMinLeftCoordinateForInnerShape());
+                        positionAnimator.setDuration(ANIMATION_DURATION);
+                        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+                        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
+                        AnimatorSet set = new AnimatorSet();
+                        set.playTogether(shapeAnimator, positionAnimator);
+                        set.start();
+                        currentAnimation = set;
+                    } else {
+                        // Shrink the circle and move to the right
+                        ValueAnimator shrinkValueAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), MIN_INNER_SHAPE_WIDTH);
+                        shrinkValueAnimator.setDuration(ANIMATION_DURATION);
+                        shrinkValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+                        shrinkValueAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
+                        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getMaxRightCoordinateForInnerShape());
+                        positionAnimator.setDuration(ANIMATION_DURATION);
+                        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+                        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
+                        AnimatorSet set = new AnimatorSet();
+                        set.playTogether(shrinkValueAnimator, positionAnimator);
+                        set.start();
+                        currentAnimation = set;
+                    }
+                }
+                break;
+            }
 
             case MotionEvent.ACTION_CANCEL: {
                 activePointerId = INVALID_POINTER_ID;
@@ -139,7 +186,6 @@ public class BllocSwitchView extends View {
             case MotionEvent.ACTION_POINTER_UP: {
                 final int pointerIndex = ev.getActionIndex();
                 final int pointerId = ev.getPointerId(pointerIndex);
-
                 if (pointerId == activePointerId) {
                     // This was our active pointer going up. Choose a new
                     // active pointer and adjust accordingly.
@@ -304,7 +350,7 @@ public class BllocSwitchView extends View {
     }
 
     private AnimatorSet getValueAnimatorToExpandCircle() {
-        ValueAnimator shapeAnimator = ValueAnimator.ofFloat(0f, getFullInnerCircleDiameter());
+        ValueAnimator shapeAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), getFullInnerCircleDiameter());
         shapeAnimator.setDuration(ANIMATION_DURATION);
         shapeAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         shapeAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
