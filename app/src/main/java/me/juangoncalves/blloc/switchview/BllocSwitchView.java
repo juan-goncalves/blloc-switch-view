@@ -35,7 +35,7 @@ public class BllocSwitchView extends View {
 
     @ColorInt
     private int containerColor;
-    private boolean checked = true;
+    private boolean checked;
 
     private RectF containerRect = new RectF();
     private RectF innerShapeRect = new RectF();
@@ -56,7 +56,7 @@ public class BllocSwitchView extends View {
     public BllocSwitchView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.BllocSwitchView);
-        setChecked(ta.getBoolean(R.styleable.BllocSwitchView_sv_checked, true));
+        checked = ta.getBoolean(R.styleable.BllocSwitchView_sv_checked, true);
         containerColor = ta.getColor(
                 R.styleable.BllocSwitchView_sv_backgroundColor,
                 getResources().getColor(R.color.switch_view_background_on)
@@ -74,15 +74,16 @@ public class BllocSwitchView extends View {
     }
 
     public void setChecked(boolean checked) {
-        this.checked = checked;
-        updateContainerPaint();
+        if (this.checked != checked) {
+            toggle();
+        }
     }
 
     public void toggle() {
         if (checked) {
-            currentAnimation = getValueAnimatorToShrinkCircle();
+            currentAnimation = shrinkAndMoveToEnd();
         } else {
-            currentAnimation = getValueAnimatorToExpandCircle();
+            currentAnimation = expandAndMoveToStart();
         }
         currentAnimation.start();
         checked = !checked;
@@ -103,13 +104,15 @@ public class BllocSwitchView extends View {
         final int action = ev.getActionMasked();
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
-                final int pointerIndex = ev.getActionIndex();
+                int pointerIndex = ev.getActionIndex();
                 // Track the time to determine if it's a simple click or a drag action
                 clickStartTime = System.currentTimeMillis();
                 // Remember where we started (for dragging)
                 lastTouchX = ev.getX(pointerIndex);
                 // Save the ID of this pointer (for dragging)
                 activePointerId = ev.getPointerId(0);
+                // As we are either toggling the button or starting a drag action, the current
+                // animation should be cancelled
                 if (currentAnimation != null) {
                     currentAnimation.cancel();
                 }
@@ -117,13 +120,11 @@ public class BllocSwitchView extends View {
             }
 
             case MotionEvent.ACTION_MOVE: {
-                // Find the index of the active pointer and fetch its position
-                final int pointerIndex = ev.findPointerIndex(activePointerId);
-                final float x = ev.getX(pointerIndex);
-                // Calculate the distance moved
-                final float dx = x - lastTouchX;
+                int pointerIndex = ev.findPointerIndex(activePointerId);
+                float x = ev.getX(pointerIndex);
+                float xDiff = x - lastTouchX;
                 float nextLeftPos = MathUtils.clamp(
-                        innerShapeRect.left + dx,
+                        innerShapeRect.left + xDiff,
                         getMinLeftCoordinateForInnerShape(),
                         getMaxRightCoordinateForInnerShape()
                 );
@@ -145,42 +146,13 @@ public class BllocSwitchView extends View {
                     float lastX = ev.getX();
                     float containerCenter = containerRect.centerX();
                     if (lastX <= containerCenter) {
-                        // Expand the circle and move to the left
                         checked = true;
-                        ValueAnimator shapeAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), getFullInnerCircleDiameter());
-                        shapeAnimator.setDuration(ANIMATION_DURATION);
-                        shapeAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-                        shapeAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
-                        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getMinLeftCoordinateForInnerShape());
-                        positionAnimator.setDuration(ANIMATION_DURATION);
-                        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-                        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
-                        ValueAnimator alphaAnimator = ValueAnimator.ofInt(Color.alpha(containerPaint.getColor()), Color.alpha(containerColor));
-                        alphaAnimator.setDuration(ANIMATION_DURATION);
-                        alphaAnimator.addUpdateListener(new BackgroundColorUpdateListener());
-                        AnimatorSet set = new AnimatorSet();
-                        set.playTogether(shapeAnimator, positionAnimator, alphaAnimator);
-                        set.start();
-                        currentAnimation = set;
+                        currentAnimation = expandAndMoveToStart();
                     } else {
-                        // Shrink the circle and move to the right
                         checked = false;
-                        ValueAnimator shrinkValueAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), MIN_INNER_SHAPE_WIDTH);
-                        shrinkValueAnimator.setDuration(ANIMATION_DURATION);
-                        shrinkValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-                        shrinkValueAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
-                        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getMaxRightCoordinateForInnerShape());
-                        positionAnimator.setDuration(ANIMATION_DURATION);
-                        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-                        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
-                        ValueAnimator alphaAnimator = ValueAnimator.ofInt(Color.alpha(containerPaint.getColor()), MIN_OPACITY);
-                        alphaAnimator.setDuration(ANIMATION_DURATION);
-                        alphaAnimator.addUpdateListener(new BackgroundColorUpdateListener());
-                        AnimatorSet set = new AnimatorSet();
-                        set.playTogether(shrinkValueAnimator, positionAnimator, alphaAnimator);
-                        set.start();
-                        currentAnimation = set;
+                        currentAnimation = shrinkAndMoveToEnd();
                     }
+                    currentAnimation.start();
                 }
                 break;
             }
@@ -191,12 +163,12 @@ public class BllocSwitchView extends View {
             }
 
             case MotionEvent.ACTION_POINTER_UP: {
-                final int pointerIndex = ev.getActionIndex();
-                final int pointerId = ev.getPointerId(pointerIndex);
+                int pointerIndex = ev.getActionIndex();
+                int pointerId = ev.getPointerId(pointerIndex);
                 if (pointerId == activePointerId) {
                     // This was our active pointer going up. Choose a new
                     // active pointer and adjust accordingly.
-                    final int newPointerIndex = pointerIndex == 0 ? 1 : 0;
+                    int newPointerIndex = pointerIndex == 0 ? 1 : 0;
                     lastTouchX = ev.getX(newPointerIndex);
                     activePointerId = ev.getPointerId(newPointerIndex);
                 }
@@ -288,7 +260,7 @@ public class BllocSwitchView extends View {
         containerRect.bottom = verticalCenter + ACTUAL_HEIGHT / 2;
         innerShapeRect.top = containerRect.top + PADDING;
         innerShapeRect.bottom = containerRect.bottom - PADDING;
-        // Decide depending on the switch checked whether to draw the full circle (ON) or the straight line (OFF)
+        // Decide depending on the switch status whether to draw the full circle (ON) or the straight line (OFF)
         if (isChecked()) {
             innerShapeRect.left = getMinLeftCoordinateForInnerShape();
             innerShapeRect.right = innerShapeRect.left + getFullInnerCircleDiameter();
@@ -340,46 +312,39 @@ public class BllocSwitchView extends View {
         containerPaint.setColor(calculateContainerColorOpacityForPosition(innerShapeRect.left));
     }
 
-    private AnimatorSet getValueAnimatorToShrinkCircle() {
-        ValueAnimator shrinkValueAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), MIN_INNER_SHAPE_WIDTH);
-        shrinkValueAnimator.setDuration(ANIMATION_DURATION);
-        shrinkValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-        shrinkValueAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
-
-        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getMaxRightCoordinateForInnerShape());
-        positionAnimator.setDuration(ANIMATION_DURATION);
-        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
-        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
-
-        ValueAnimator alphaAnimator = ValueAnimator.ofInt(Color.alpha(containerPaint.getColor()), MIN_OPACITY);
-        alphaAnimator.setDuration(ANIMATION_DURATION);
-        alphaAnimator.addUpdateListener(new BackgroundColorUpdateListener());
-
-        AnimatorSet set = new AnimatorSet();
-        set.playTogether(shrinkValueAnimator, positionAnimator, alphaAnimator);
-        return set;
-    }
-
-    private AnimatorSet getValueAnimatorToExpandCircle() {
+    private AnimatorSet expandAndMoveToStart() {
         ValueAnimator shapeAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), getFullInnerCircleDiameter());
         shapeAnimator.setDuration(ANIMATION_DURATION);
         shapeAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         shapeAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
-
         ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getMinLeftCoordinateForInnerShape());
         positionAnimator.setDuration(ANIMATION_DURATION);
         positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
-
         ValueAnimator alphaAnimator = ValueAnimator.ofInt(Color.alpha(containerPaint.getColor()), Color.alpha(containerColor));
         alphaAnimator.setDuration(ANIMATION_DURATION);
         alphaAnimator.addUpdateListener(new BackgroundColorUpdateListener());
-
         AnimatorSet set = new AnimatorSet();
         set.playTogether(shapeAnimator, positionAnimator, alphaAnimator);
         return set;
     }
 
+    private AnimatorSet shrinkAndMoveToEnd() {
+        ValueAnimator shrinkValueAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), MIN_INNER_SHAPE_WIDTH);
+        shrinkValueAnimator.setDuration(ANIMATION_DURATION);
+        shrinkValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        shrinkValueAnimator.addUpdateListener(new InnerShapeWidthUpdateListener());
+        ValueAnimator positionAnimator = ValueAnimator.ofFloat(innerShapeRect.left, getMaxRightCoordinateForInnerShape());
+        positionAnimator.setDuration(ANIMATION_DURATION);
+        positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
+        ValueAnimator alphaAnimator = ValueAnimator.ofInt(Color.alpha(containerPaint.getColor()), MIN_OPACITY);
+        alphaAnimator.setDuration(ANIMATION_DURATION);
+        alphaAnimator.addUpdateListener(new BackgroundColorUpdateListener());
+        AnimatorSet set = new AnimatorSet();
+        set.playTogether(shrinkValueAnimator, positionAnimator, alphaAnimator);
+        return set;
+    }
 
     private class BackgroundColorUpdateListener implements ValueAnimator.AnimatorUpdateListener {
         @Override
