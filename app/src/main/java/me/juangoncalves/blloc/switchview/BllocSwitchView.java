@@ -140,7 +140,7 @@ public class BllocSwitchView extends View {
                 if (actionDuration <= MAX_CLICK_DURATION) {
                     performClick();
                 } else {
-                    float lastX = ev.getX();
+                    float lastX = innerShapeRect.centerX();
                     float containerCenter = containerRect.centerX();
                     if (lastX <= containerCenter) {
                         checked = true;
@@ -149,7 +149,7 @@ public class BllocSwitchView extends View {
                         checked = false;
                         currentAnimation = shrinkAndMoveToEnd();
                     }
-                    currentAnimation.start();
+                    if (currentAnimation != null) currentAnimation.start();
                 }
                 break;
             }
@@ -216,18 +216,19 @@ public class BllocSwitchView extends View {
         int widthSize = MeasureSpec.getSize(widthMeasureSpec);
         int heightMode = MeasureSpec.getMode(heightMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
-
+        int desiredWidth = ACTUAL_WIDTH + getPaddingStart() + getPaddingEnd();
+        int desiredHeight = ACTUAL_HEIGHT + getPaddingTop() + getPaddingBottom();
         int width;
         switch (widthMode) {
             case MeasureSpec.EXACTLY:
                 width = widthSize;
                 break;
             case MeasureSpec.AT_MOST:
-                width = Math.min(ACTUAL_WIDTH, widthSize);
+                width = Math.min(desiredWidth, widthSize);
                 break;
             case MeasureSpec.UNSPECIFIED:
             default:
-                width = ACTUAL_WIDTH;
+                width = desiredWidth;
                 break;
         }
 
@@ -237,11 +238,11 @@ public class BllocSwitchView extends View {
                 height = heightSize;
                 break;
             case MeasureSpec.AT_MOST:
-                height = Math.min(ACTUAL_HEIGHT, heightSize);
+                height = Math.min(desiredHeight, heightSize);
                 break;
             case MeasureSpec.UNSPECIFIED:
             default:
-                height = ACTUAL_HEIGHT;
+                height = desiredHeight;
                 break;
         }
         setMeasuredDimension(width, height);
@@ -250,8 +251,8 @@ public class BllocSwitchView extends View {
     @Override
     protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
         super.onSizeChanged(width, height, oldWidth, oldHeight);
-        containerRect.right = width;
-        containerRect.left = width - ACTUAL_WIDTH;
+        containerRect.right = width - getPaddingEnd();
+        containerRect.left = containerRect.right - ACTUAL_WIDTH;
         int verticalCenter = height / 2;
         containerRect.top = verticalCenter - ACTUAL_HEIGHT / 2;
         containerRect.bottom = verticalCenter + ACTUAL_HEIGHT / 2;
@@ -302,11 +303,13 @@ public class BllocSwitchView extends View {
         innerShapePaint.setStyle(Paint.Style.STROKE);
         innerShapePaint.setColor(Color.WHITE);
         innerShapePaint.setStrokeWidth(4);
+        innerShapePaint.setAntiAlias(true);
     }
 
     private void updateContainerPaint() {
         containerPaint.setStyle(Paint.Style.FILL);
         containerPaint.setColor(calculateContainerColorOpacityForPosition(innerShapeRect.left));
+        containerPaint.setAntiAlias(true);
     }
 
     private AnimatorSet expandAndMoveToStart() {
