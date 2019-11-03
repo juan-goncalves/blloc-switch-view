@@ -45,7 +45,6 @@ public class BllocSwitchView extends View {
     private Paint innerShapePaint = new Paint();
     private Paint containerPaint = new Paint();
 
-
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -136,6 +135,7 @@ public class BllocSwitchView extends View {
                     float containerCenter = containerRect.centerX();
                     if (lastX <= containerCenter) {
                         // Expand the circle and move to the left
+                        checked = true;
                         ValueAnimator shapeAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), getFullInnerCircleDiameter());
                         shapeAnimator.setDuration(ANIMATION_DURATION);
                         shapeAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
@@ -153,6 +153,7 @@ public class BllocSwitchView extends View {
                         currentAnimation = set;
                     } else {
                         // Shrink the circle and move to the right
+                        checked = false;
                         ValueAnimator shrinkValueAnimator = ValueAnimator.ofFloat(innerShapeRect.width(), MIN_INNER_SHAPE_WIDTH);
                         shrinkValueAnimator.setDuration(ANIMATION_DURATION);
                         shrinkValueAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
