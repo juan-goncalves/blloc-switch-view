@@ -282,7 +282,7 @@ public class BllocSwitchView extends View {
     protected void onRestoreInstanceState(Parcelable state) {
         super.onRestoreInstanceState(state);
         SavedState customState = (SavedState) state;
-        setChecked(customState.isChecked);
+        checked = customState.isChecked;
     }
 
     private float getMaxRightCoordinateForInnerShape() {
