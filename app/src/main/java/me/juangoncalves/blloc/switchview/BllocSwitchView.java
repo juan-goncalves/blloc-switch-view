@@ -8,7 +8,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.AttributeSet;
@@ -92,11 +91,9 @@ public class BllocSwitchView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            float roundedCornerRadius = containerRect.height() / 2;
-            canvas.drawRoundRect(containerRect, roundedCornerRadius, roundedCornerRadius, containerPaint);
-            canvas.drawArc(innerShapeRect, 0, 360, true, innerShapePaint);
-        }
+        float roundedCornerRadius = containerRect.height() / 2;
+        canvas.drawRoundRect(containerRect, roundedCornerRadius, roundedCornerRadius, containerPaint);
+        canvas.drawArc(innerShapeRect, 0, 360, true, innerShapePaint);
     }
 
     @Override
