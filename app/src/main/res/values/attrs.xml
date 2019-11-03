@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <declare-styleable name="BllocSwitchView">
+        <attr name="sv_backgroundColor" format="color" />
         <attr name="sv_checked" format="boolean" />
     </declare-styleable>
 </resources>
