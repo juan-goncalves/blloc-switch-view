@@ -12,15 +12,13 @@ import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.AttributeSet;
-import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 
 import androidx.annotation.Nullable;
+import androidx.core.graphics.ColorUtils;
 import androidx.core.math.MathUtils;
-import androidx.core.view.GestureDetectorCompat;
-import androidx.vectordrawable.graphics.drawable.ArgbEvaluator;
 
 import static android.view.MotionEvent.INVALID_POINTER_ID;
 
@@ -31,11 +29,10 @@ public class BllocSwitchView extends View {
     private static final int ACTUAL_WIDTH = 140;
     private static final int ACTUAL_HEIGHT = 70;
     private static final float MIN_INNER_SHAPE_WIDTH = 1f;
+    private static final int MIN_OPACITY = 80;
     private static final float PADDING = 21;
 
-    private GestureDetectorCompat gestureDetector;
-    private int onBackgroundColor;
-    private int offBackgroundColor;
+    private int containerColor;
     private boolean checked = true;
     // The ‘active pointer’ is the one currently moving our object.
     private int activePointerId = INVALID_POINTER_ID;
@@ -67,22 +64,8 @@ public class BllocSwitchView extends View {
         TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.BllocSwitchView);
         setChecked(ta.getBoolean(R.styleable.BllocSwitchView_sv_checked, true));
         ta.recycle();
-        onBackgroundColor = getResources().getColor(R.color.switch_view_background_on);
-        offBackgroundColor = getResources().getColor(R.color.switch_view_background_off);
+        containerColor = getResources().getColor(R.color.switch_view_background_on);
         updateInnerShapePaint();
-        updateContainerPaint();
-        gestureDetector = new GestureDetectorCompat(context, new GestureDetector.SimpleOnGestureListener() {
-            @Override
-            public boolean onDown(MotionEvent e) {
-                return true;
-            }
-
-            @Override
-            public boolean onSingleTapUp(MotionEvent e) {
-                performClick();
-                return true;
-            }
-        });
     }
 
     public BllocSwitchView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
@@ -131,6 +114,7 @@ public class BllocSwitchView extends View {
                 );
                 innerShapeRect.left = nextLeftPos;
                 innerShapeRect.right = nextLeftPos + calculateInnerShapeWidthForPosition(nextLeftPos);
+                containerPaint.setColor(calculateContainerColorForPosition(nextLeftPos));
                 invalidate();
                 // Remember this touch position for the next move event
                 lastTouchX = x;
@@ -155,8 +139,11 @@ public class BllocSwitchView extends View {
                         positionAnimator.setDuration(ANIMATION_DURATION);
                         positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
                         positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
+                        ValueAnimator alphaAnimator = ValueAnimator.ofInt(Color.alpha(containerPaint.getColor()), Color.alpha(containerColor));
+                        alphaAnimator.setDuration(ANIMATION_DURATION);
+                        alphaAnimator.addUpdateListener(new BackgroundColorUpdateListener());
                         AnimatorSet set = new AnimatorSet();
-                        set.playTogether(shapeAnimator, positionAnimator);
+                        set.playTogether(shapeAnimator, positionAnimator, alphaAnimator);
                         set.start();
                         currentAnimation = set;
                     } else {
@@ -169,8 +156,11 @@ public class BllocSwitchView extends View {
                         positionAnimator.setDuration(ANIMATION_DURATION);
                         positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
                         positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
+                        ValueAnimator alphaAnimator = ValueAnimator.ofInt(Color.alpha(containerPaint.getColor()), MIN_OPACITY);
+                        alphaAnimator.setDuration(ANIMATION_DURATION);
+                        alphaAnimator.addUpdateListener(new BackgroundColorUpdateListener());
                         AnimatorSet set = new AnimatorSet();
-                        set.playTogether(shrinkValueAnimator, positionAnimator);
+                        set.playTogether(shrinkValueAnimator, positionAnimator, alphaAnimator);
                         set.start();
                         currentAnimation = set;
                     }
@@ -211,6 +201,20 @@ public class BllocSwitchView extends View {
         float yAxisIntersection = -1 * MIN_INNER_SHAPE_WIDTH * slope + rightLimit;
         float result = (leftPoint - yAxisIntersection) / slope;
         return MathUtils.clamp(result, MIN_INNER_SHAPE_WIDTH, maxInnerWidth);
+    }
+
+    private int calculateContainerColorForPosition(float leftPoint) {
+        // Modelled as a line (y = mx + b) with the vertical axis being the left coordinate of the
+        // inner shape rectangle and the horizontal axis as the expected color opacity of the
+        // container's background for that position, such that for Y = rightLimit, it returns the
+        // minimum opacity, and for Y = leftLimit, full opacity.
+        int fullOpacity = Color.alpha(containerColor);
+        float leftLimit = getMinLeftCoordinateForInnerShape();
+        float rightLimit = getMaxRightCoordinateForInnerShape();
+        float slope = (leftLimit - rightLimit) / (fullOpacity - MIN_OPACITY);
+        float yAxisIntersection = -1 * MIN_OPACITY * slope + rightLimit;
+        float result = (leftPoint - yAxisIntersection) / slope;
+        return ColorUtils.setAlphaComponent(containerColor, (int) result);
     }
 
     @Override
@@ -278,6 +282,7 @@ public class BllocSwitchView extends View {
             innerShapeRect.right = getMaxRightCoordinateForInnerShape();
             innerShapeRect.left = innerShapeRect.right - MIN_INNER_SHAPE_WIDTH;
         }
+        updateContainerPaint();
     }
 
     @Nullable
@@ -318,15 +323,7 @@ public class BllocSwitchView extends View {
 
     private void updateContainerPaint() {
         containerPaint.setStyle(Paint.Style.FILL);
-        containerPaint.setColor(getColorForState());
-    }
-
-    private int getColorForState() {
-        if (checked) {
-            return onBackgroundColor;
-        } else {
-            return offBackgroundColor;
-        }
+        containerPaint.setColor(calculateContainerColorForPosition(innerShapeRect.left));
     }
 
     private AnimatorSet getValueAnimatorToShrinkCircle() {
@@ -340,12 +337,12 @@ public class BllocSwitchView extends View {
         positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
 
-        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), containerPaint.getColor(), offBackgroundColor);
-        colorAnimation.setDuration(ANIMATION_DURATION);
-        colorAnimation.addUpdateListener(new BackgroundColorUpdateListener());
+        ValueAnimator alphaAnimator = ValueAnimator.ofInt(Color.alpha(containerPaint.getColor()), MIN_OPACITY);
+        alphaAnimator.setDuration(ANIMATION_DURATION);
+        alphaAnimator.addUpdateListener(new BackgroundColorUpdateListener());
 
         AnimatorSet set = new AnimatorSet();
-        set.playTogether(shrinkValueAnimator, positionAnimator, colorAnimation);
+        set.playTogether(shrinkValueAnimator, positionAnimator, alphaAnimator);
         return set;
     }
 
@@ -360,12 +357,12 @@ public class BllocSwitchView extends View {
         positionAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
         positionAnimator.addUpdateListener(new InnerShapePositionUpdateListener());
 
-        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), containerPaint.getColor(), onBackgroundColor);
-        colorAnimation.setDuration(ANIMATION_DURATION);
-        colorAnimation.addUpdateListener(new BackgroundColorUpdateListener());
+        ValueAnimator alphaAnimator = ValueAnimator.ofInt(Color.alpha(containerPaint.getColor()), Color.alpha(containerColor));
+        alphaAnimator.setDuration(ANIMATION_DURATION);
+        alphaAnimator.addUpdateListener(new BackgroundColorUpdateListener());
 
         AnimatorSet set = new AnimatorSet();
-        set.playTogether(shapeAnimator, positionAnimator, colorAnimation);
+        set.playTogether(shapeAnimator, positionAnimator, alphaAnimator);
         return set;
     }
 
@@ -373,8 +370,9 @@ public class BllocSwitchView extends View {
     private class BackgroundColorUpdateListener implements ValueAnimator.AnimatorUpdateListener {
         @Override
         public void onAnimationUpdate(ValueAnimator valueAnimator) {
-            int updatedColor = (int) valueAnimator.getAnimatedValue();
-            containerPaint.setColor(updatedColor);
+            int updatedOpacity = (int) valueAnimator.getAnimatedValue();
+            int currentColor = containerPaint.getColor();
+            containerPaint.setColor(ColorUtils.setAlphaComponent(currentColor, updatedOpacity));
             invalidate();
         }
     }
