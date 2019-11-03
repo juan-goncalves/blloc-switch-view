@@ -16,6 +16,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 
+import androidx.annotation.ColorInt;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.math.MathUtils;
@@ -32,6 +33,7 @@ public class BllocSwitchView extends View {
     private static final int MIN_OPACITY = 80;
     private static final float PADDING = 21;
 
+    @ColorInt
     private int containerColor;
     private boolean checked = true;
     // The ‘active pointer’ is the one currently moving our object.
@@ -63,8 +65,11 @@ public class BllocSwitchView extends View {
         super(context, attrs);
         TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.BllocSwitchView);
         setChecked(ta.getBoolean(R.styleable.BllocSwitchView_sv_checked, true));
+        containerColor = ta.getColor(
+                R.styleable.BllocSwitchView_sv_backgroundColor,
+                getResources().getColor(R.color.switch_view_background_on)
+        );
         ta.recycle();
-        containerColor = getResources().getColor(R.color.switch_view_background_on);
         updateInnerShapePaint();
     }
 
