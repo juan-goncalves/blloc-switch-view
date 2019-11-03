@@ -30,30 +30,23 @@ public class BllocSwitchView extends View {
     private static final int ACTUAL_WIDTH = 140;
     private static final int ACTUAL_HEIGHT = 70;
     private static final float MIN_INNER_SHAPE_WIDTH = 1f;
-    private static final int MIN_OPACITY = 80;
     private static final float PADDING = 21;
+    private static final int MIN_OPACITY = 80;
 
     @ColorInt
     private int containerColor;
     private boolean checked = true;
-    // The ‘active pointer’ is the one currently moving our object.
-    private int activePointerId = INVALID_POINTER_ID;
-    float lastTouchX;
 
     private RectF containerRect = new RectF();
     private RectF innerShapeRect = new RectF();
     private Paint innerShapePaint = new Paint();
     private Paint containerPaint = new Paint();
 
-    @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            float roundedCornerRadius = containerRect.height() / 2;
-            canvas.drawRoundRect(containerRect, roundedCornerRadius, roundedCornerRadius, containerPaint);
-            canvas.drawArc(innerShapeRect, 0, 360, true, innerShapePaint);
-        }
-    }
+    // The ‘active pointer’ is the one currently moving our object.
+    private AnimatorSet currentAnimation = null;
+    private int activePointerId = INVALID_POINTER_ID;
+    private float lastTouchX;
+    private long clickStartTime = 0;
 
     public BllocSwitchView(Context context) {
         super(context);
@@ -85,8 +78,25 @@ public class BllocSwitchView extends View {
         updateContainerPaint();
     }
 
-    private AnimatorSet currentAnimation = null;
-    private long clickStartTime = 0;
+    public void toggle() {
+        if (checked) {
+            currentAnimation = getValueAnimatorToShrinkCircle();
+        } else {
+            currentAnimation = getValueAnimatorToExpandCircle();
+        }
+        currentAnimation.start();
+        checked = !checked;
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            float roundedCornerRadius = containerRect.height() / 2;
+            canvas.drawRoundRect(containerRect, roundedCornerRadius, roundedCornerRadius, containerPaint);
+            canvas.drawArc(innerShapeRect, 0, 360, true, innerShapePaint);
+        }
+    }
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
@@ -94,6 +104,7 @@ public class BllocSwitchView extends View {
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
                 final int pointerIndex = ev.getActionIndex();
+                // Track the time to determine if it's a simple click or a drag action
                 clickStartTime = System.currentTimeMillis();
                 // Remember where we started (for dragging)
                 lastTouchX = ev.getX(pointerIndex);
@@ -118,7 +129,7 @@ public class BllocSwitchView extends View {
                 );
                 innerShapeRect.left = nextLeftPos;
                 innerShapeRect.right = nextLeftPos + calculateInnerShapeWidthForPosition(nextLeftPos);
-                containerPaint.setColor(calculateContainerColorForPosition(nextLeftPos));
+                containerPaint.setColor(calculateContainerColorOpacityForPosition(nextLeftPos));
                 invalidate();
                 // Remember this touch position for the next move event
                 lastTouchX = x;
@@ -209,7 +220,7 @@ public class BllocSwitchView extends View {
         return MathUtils.clamp(result, MIN_INNER_SHAPE_WIDTH, maxInnerWidth);
     }
 
-    private int calculateContainerColorForPosition(float leftPoint) {
+    private int calculateContainerColorOpacityForPosition(float leftPoint) {
         // Modelled as a line (y = mx + b) with the vertical axis being the left coordinate of the
         // inner shape rectangle and the horizontal axis as the expected color opacity of the
         // container's background for that position, such that for Y = rightLimit, it returns the
@@ -225,12 +236,7 @@ public class BllocSwitchView extends View {
 
     @Override
     public boolean performClick() {
-        if (checked) {
-            getValueAnimatorToShrinkCircle().start();
-        } else {
-            getValueAnimatorToExpandCircle().start();
-        }
-        checked = !checked;
+        toggle();
         return super.performClick();
     }
 
@@ -250,6 +256,7 @@ public class BllocSwitchView extends View {
             case MeasureSpec.AT_MOST:
                 width = Math.min(ACTUAL_WIDTH, widthSize);
                 break;
+            case MeasureSpec.UNSPECIFIED:
             default:
                 width = ACTUAL_WIDTH;
                 break;
@@ -263,6 +270,7 @@ public class BllocSwitchView extends View {
             case MeasureSpec.AT_MOST:
                 height = Math.min(ACTUAL_HEIGHT, heightSize);
                 break;
+            case MeasureSpec.UNSPECIFIED:
             default:
                 height = ACTUAL_HEIGHT;
                 break;
@@ -271,11 +279,11 @@ public class BllocSwitchView extends View {
     }
 
     @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        super.onSizeChanged(w, h, oldw, oldh);
-        containerRect.right = w;
-        containerRect.left = w - ACTUAL_WIDTH;
-        int verticalCenter = h / 2;
+    protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight);
+        containerRect.right = width;
+        containerRect.left = width - ACTUAL_WIDTH;
+        int verticalCenter = height / 2;
         containerRect.top = verticalCenter - ACTUAL_HEIGHT / 2;
         containerRect.bottom = verticalCenter + ACTUAL_HEIGHT / 2;
         innerShapeRect.top = containerRect.top + PADDING;
@@ -329,7 +337,7 @@ public class BllocSwitchView extends View {
 
     private void updateContainerPaint() {
         containerPaint.setStyle(Paint.Style.FILL);
-        containerPaint.setColor(calculateContainerColorForPosition(innerShapeRect.left));
+        containerPaint.setColor(calculateContainerColorOpacityForPosition(innerShapeRect.left));
     }
 
     private AnimatorSet getValueAnimatorToShrinkCircle() {
