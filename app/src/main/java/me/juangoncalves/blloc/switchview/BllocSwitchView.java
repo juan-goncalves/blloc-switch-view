@@ -47,13 +47,9 @@ public class BllocSwitchView extends View {
     private float lastTouchX;
     private long clickStartTime = 0;
 
-    public BllocSwitchView(Context context) {
-        super(context);
-        setSaveEnabled(true);
-    }
-
     public BllocSwitchView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
+        setSaveEnabled(true);
         TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.BllocSwitchView);
         checked = ta.getBoolean(R.styleable.BllocSwitchView_sv_checked, true);
         containerColor = ta.getColor(
@@ -62,10 +58,6 @@ public class BllocSwitchView extends View {
         );
         ta.recycle();
         updateInnerShapePaint();
-    }
-
-    public BllocSwitchView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
     }
 
     public boolean isChecked() {
