@@ -26,6 +26,7 @@ public class BllocSwitchView extends View {
 
     private static final long ANIMATION_DURATION = 330L;
     private static final long MAX_CLICK_DURATION = 200L;
+    private static final long MAX_CLICK_DISTANCE = 15;
     private static final int ACTUAL_WIDTH = 140;
     private static final int ACTUAL_HEIGHT = 70;
     private static final float MIN_INNER_SHAPE_WIDTH = 1f;
@@ -128,7 +129,7 @@ public class BllocSwitchView extends View {
             case MotionEvent.ACTION_UP: {
                 activePointerId = INVALID_POINTER_ID;
                 long actionDuration = System.currentTimeMillis() - clickStartTime;
-                if (actionDuration <= MAX_CLICK_DURATION) {
+                if (actionDuration <= MAX_CLICK_DURATION && horizontalDistanceInDp(lastTouchX, ev.getX()) < MAX_CLICK_DISTANCE) {
                     performClick();
                 } else {
                     float lastX = innerShapeRect.centerX();
@@ -164,6 +165,10 @@ public class BllocSwitchView extends View {
             }
         }
         return true;
+    }
+
+    private float horizontalDistanceInDp(float x1, float x2) {
+        return Math.abs(x1 - x2) / getResources().getDisplayMetrics().density;
     }
 
     private float calculateInnerShapeWidthForPosition(float leftPoint) {
