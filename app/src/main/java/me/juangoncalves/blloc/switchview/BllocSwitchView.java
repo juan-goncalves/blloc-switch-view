@@ -35,7 +35,7 @@ public class BllocSwitchView extends View {
     @ColorInt
     private int containerColor;
     private boolean checked;
-
+    private float containerRoundedCornerRadius;
     private RectF containerRect = new RectF();
     private RectF innerShapeRect = new RectF();
     private Paint innerShapePaint = new Paint();
@@ -45,7 +45,7 @@ public class BllocSwitchView extends View {
     private AnimatorSet currentAnimation = null;
     private int activePointerId = INVALID_POINTER_ID;
     private float lastTouchX;
-    private long clickStartTime = 0;
+    private long clickStartTime;
 
     public BllocSwitchView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -83,8 +83,7 @@ public class BllocSwitchView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        float roundedCornerRadius = containerRect.height() / 2;
-        canvas.drawRoundRect(containerRect, roundedCornerRadius, roundedCornerRadius, containerPaint);
+        canvas.drawRoundRect(containerRect, containerRoundedCornerRadius, containerRoundedCornerRadius, containerPaint);
         canvas.drawArc(innerShapeRect, 0, 360, true, innerShapePaint);
     }
 
@@ -248,6 +247,7 @@ public class BllocSwitchView extends View {
         int verticalCenter = height / 2;
         containerRect.top = verticalCenter - ACTUAL_HEIGHT / 2;
         containerRect.bottom = verticalCenter + ACTUAL_HEIGHT / 2;
+        containerRoundedCornerRadius = containerRect.height() / 2;
         innerShapeRect.top = containerRect.top + PADDING;
         innerShapeRect.bottom = containerRect.bottom - PADDING;
         // Decide depending on the switch status whether to draw the full circle (ON) or the straight line (OFF)
