@@ -3,6 +3,7 @@ package me.juangoncalves.blloc.switchview;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -11,6 +12,7 @@ public class MainActivity extends AppCompatActivity {
     private Button toggleButton;
     private Button checkButton;
     private Button uncheckButton;
+    private TextView versionTextView;
     private BllocSwitchView bllocSwitch;
 
     @Override
@@ -21,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
         toggleButton = findViewById(R.id.button);
         checkButton = findViewById(R.id.checkButton);
         uncheckButton = findViewById(R.id.uncheckButton);
+        versionTextView = findViewById(R.id.versionTextView);
         initView();
     }
 
@@ -43,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
                 bllocSwitch.setChecked(false);
             }
         });
+        versionTextView.setText(BuildConfig.VERSION_NAME);
     }
 
 }
