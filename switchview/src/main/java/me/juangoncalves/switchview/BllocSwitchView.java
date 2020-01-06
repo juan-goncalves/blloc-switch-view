@@ -1,4 +1,4 @@
-package me.juangoncalves.blloc.switchview;
+package me.juangoncalves.switchview;
 
 import android.animation.AnimatorSet;
 import android.animation.ValueAnimator;

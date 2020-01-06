@@ -7,6 +7,8 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import me.juangoncalves.switchview.BllocSwitchView;
+
 public class MainActivity extends AppCompatActivity {
 
     private Button toggleButton;

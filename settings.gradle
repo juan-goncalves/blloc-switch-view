@@ -1,2 +1,2 @@
-include ':app'
+include ':app', ':switchview'
 rootProject.name='Blloc Switch View'
