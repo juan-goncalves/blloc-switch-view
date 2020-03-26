@@ -6,12 +6,13 @@ Custom lightweight switch for Android applications.
 </p>
 
 #### Features
-- Draggable state indicator <br/><img src="recordings/drag-example.gif" width="200" height="112" /><br/>
-- Dynamic color based on the position of the state indicator
-- Automatically update the switch state after finishing a drag motion <br/><img src="recordings/snap-example.gif" width="200" height="112" /><br/>
-- Customizable background color
-- Allow toggling and setting the switch state programmatically
 
+| Feature        | Example           |
+| ------------- |:-------------:|
+|Draggable state indicator| <img src="recordings/drag-example.gif" width="200" height="112" /> |
+|Switch state snapping after finishing a drag motion| <img src="recordings/snap-example.gif" width="200" height="112" />|
+|Customizable background color|-|
+|Allow toggling and setting the switch state programmatically|-|
 
 #### Usage
 
