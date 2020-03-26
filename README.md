@@ -1,12 +1,14 @@
 ## Custom Switch View  [![](https://jitpack.io/v/juan-goncalves/blloc-switch-view.svg)](https://jitpack.io/#juan-goncalves/blloc-switch-view) 
 Custom lightweight switch for Android applications.
 
+<p align="center">
 <img src="recordings/toggle-example.gif" width="200" height="112" />
+</p>
 
 #### Features
-- Draggable state indicator
+- Draggable state indicator <br/><img src="recordings/drag-example.gif" width="200" height="112" /><br/>
 - Dynamic color based on the position of the state indicator
-- Automatically update the switch state after finishing a drag motion
+- Automatically update the switch state after finishing a drag motion <br/><img src="recordings/snap-example.gif" width="200" height="112" /><br/>
 - Customizable background color
 - Allow toggling and setting the switch state programmatically
 
