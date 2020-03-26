@@ -1,4 +1,4 @@
-package me.juangoncalves.blloc.switchview;
+package me.juangoncalves.switchview;
 
 import android.animation.AnimatorSet;
 import android.animation.ValueAnimator;
@@ -390,7 +390,7 @@ public class BllocSwitchView extends View {
         @Override
         public void writeToParcel(Parcel out, int flags) {
             super.writeToParcel(out, flags);
-            out.writeInt(isChekedAsInt());
+            out.writeInt(isCheckedAsInt());
         }
 
         public static final Parcelable.Creator<SavedState> CREATOR = new Parcelable.Creator<SavedState>() {
@@ -403,7 +403,7 @@ public class BllocSwitchView extends View {
             }
         };
 
-        private int isChekedAsInt() {
+        private int isCheckedAsInt() {
             if (isChecked)
                 return TRUE;
             else

@@ -29,7 +29,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView" />
 
-    <me.juangoncalves.blloc.switchview.BllocSwitchView
+    <me.juangoncalves.switchview.BllocSwitchView
         android:id="@+id/bllocSwitch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
